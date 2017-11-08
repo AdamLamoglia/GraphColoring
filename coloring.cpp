@@ -8,146 +8,145 @@
 
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 using namespace std;
 
 
 class Grafo{
-	int numVertices,verticeDeMaiorGrau = 0,corAtual = -1,numCoresMaxima;
+	int numVertices, numCoresMaxima;
+
 
 
 public:
+
+	struct vertice{
+			int grau;
+			int index;
+			vector<int> coresPossiveis;
+	};
+
+	vector<vertice> vertices;
 	vector<int> corDoVertice;
-	vector<int> numCoresPossiveisDoVertice;
 	vector<vector<int> > listaDeAdjacencia;
 
 	Grafo(int numVertices);
 
 
-	void setCorAtual(int cor);
-	void setVerticeDeMaiorGrau(int u);
-	void setNumCoresMaxima(int num);
-
-	int getCorAtual();
 	int getSize();
 	int getVerticeDeMaiorGrau();
-	int getNumCoresMaxima();
 
-	void addEdge(int u,int v);
-	void definirVerticeDeMaiorGrau();
-	void restringirCor(int u);
-	void definirCor();
+
+	void addEdge(int u, int v);
+	void ordenarGrafoPorVerticeDeMaiorGrau();
+	void restringirCor(int u, int cor);
+	void definirCor(int u,int cor);
 	void colorirGrafo();
+	int verificarCorPossivel(int u);
 	void imprime();
 };
 
 Grafo::Grafo(int numVertices){
 	this->numVertices = numVertices;
-	this->numCoresMaxima = numVertices;
+	this->numCoresMaxima = 0;
 
 	vector<int> aux;
 
+	this->vertices.resize(this->getSize());
+
+	for(int i = 0; i < this->getSize(); i++){
+		this->vertices[i].index = i;
+		this->vertices[i].grau = 0;
+		this->vertices[i].coresPossiveis.resize(this->getSize());
+
+		//no inicio, todos os vertices podem ter cores de 0..tamanho-1
+		for(int j = 0; j < this->getSize(); j++){
+			this->vertices[i].coresPossiveis[j] = j;
+		}
+	}
+
 	this->corDoVertice.resize(this->getSize(),-1);
 	this->listaDeAdjacencia.resize(this->getSize());
-	this->numCoresPossiveisDoVertice.resize(this->getSize(),this->getSize());
+
 
 }
 
-void Grafo::setCorAtual(int cor){
-	this->corAtual = cor;
-}
 
-void Grafo::setVerticeDeMaiorGrau(int u){
-	this->verticeDeMaiorGrau = u;
-}
-
-void Grafo::setNumCoresMaxima(int num){
-	this->numCoresMaxima = num;
-}
-
-int Grafo::getCorAtual(){
-	return this->corAtual;
-}
-
-int Grafo::getVerticeDeMaiorGrau(){
-	return this->verticeDeMaiorGrau;
-}
 
 int Grafo::getSize(){
 	return this->numVertices;
 }
 
-int Grafo::getNumCoresMaxima(){
-	return this->numCoresMaxima;
-}
-
 
 void Grafo::addEdge(int u,int v){
+
 	this->listaDeAdjacencia[u].push_back(v);
-
 	this->listaDeAdjacencia[v].push_back(u);
+
+	this->vertices[u].grau = this->listaDeAdjacencia[u].size();
+	this->vertices[v].grau = this->listaDeAdjacencia[v].size();
 }
 
-void Grafo::definirVerticeDeMaiorGrau(){
+bool maiorGrau(Grafo::vertice u,Grafo::vertice v){
+	return u.grau > v.grau;
+}
 
-	//se o vertice ainda nao foi colorido, sera analisado
-	//caso tenha mais vizinhos, ele sera o vertice de maior grau
-	//tal escolha sera feita pois aumentara as restricoes para os outros vertices
-	for(int i = 0; i < this->getSize(); i++)
-		if(this->listaDeAdjacencia[i].size() > this->getVerticeDeMaiorGrau() && this->corDoVertice[i] == -1)
-			this->setVerticeDeMaiorGrau(i);
+void Grafo::ordenarGrafoPorVerticeDeMaiorGrau(){
+
+	sort(this->vertices.begin(),this->vertices.end(),maiorGrau);
 
 }
 
-void Grafo::restringirCor(int u){
 
-	//se o vertice ainda nao foi colorido, o numero de cores possiveis para ele diminuira
+
+//CP
+void Grafo::restringirCor(int u,int cor){
+
 	for(int i = 0; i < this->listaDeAdjacencia[u].size(); i++)
-		if(this->corDoVertice[listaDeAdjacencia[u][i]] == -1)
-			this->numCoresPossiveisDoVertice[listaDeAdjacencia[u][i]]--;
+		this->vertices[this->listaDeAdjacencia[u][i]].coresPossiveis[cor] = -1;
+
+
 
 }
 
-void Grafo::definirCor(){
+void Grafo::definirCor(int u,int cor){
 
-	this->corDoVertice[this->getVerticeDeMaiorGrau()] = this->getCorAtual();
+	this->corDoVertice[u] = cor;
 
-	this->restringirCor(this->getVerticeDeMaiorGrau());
+	if(cor > this->numCoresMaxima)
+		this->numCoresMaxima = cor;
 
+}
+
+int Grafo::verificarCorPossivel(int u){
+
+	for(int i = 0; i < this->getSize(); i++)
+		if(this->vertices[u].coresPossiveis[i] != -1)
+			return this->vertices[u].coresPossiveis[i];
+
+
+	return -1;
 }
 
 void Grafo::colorirGrafo(){
+	int corAtual;
+
+	this->ordenarGrafoPorVerticeDeMaiorGrau();
+
 
 	for(int i = 0; i < this->getSize(); i++){
 
-		cout << "Cores dos vertices: " << endl;
 
-		for(int j = 0; j < this->getSize(); j++)
-			cout << this->corDoVertice[j] << " ";
-		cout << endl;
-
-		this->definirVerticeDeMaiorGrau();
-
-		cout << "Vertice de maior grau atual: " << this->getVerticeDeMaiorGrau() << endl;
-		cout << "Numero de cores possiveis do vertice " << this->getVerticeDeMaiorGrau() << ": "  << this->numCoresPossiveisDoVertice[this->getVerticeDeMaiorGrau()] << endl;
-
-		if(this->numCoresPossiveisDoVertice[this->getVerticeDeMaiorGrau()] == this->getNumCoresMaxima()){
-			cout << "entrou" << endl;
-
-			this->setCorAtual(this->getCorAtual() + 1);
-
-			this->definirCor();
-
-			this->setVerticeDeMaiorGrau(0);
+		if(i == 0){
+			this->definirCor(this->vertices[i].index,0);
+			this->restringirCor(this->vertices[i].index,0);
+			continue;
 		}
-		else if(this->numCoresPossiveisDoVertice[this->getVerticeDeMaiorGrau()] < this->getNumCoresMaxima()){
 
-			cout << "entrou2" << endl;
+		corAtual = this->verificarCorPossivel(this->vertices[i].index);
 
-			this->definirCor();
-
-			this->setVerticeDeMaiorGrau(0);
-		}
+		this->definirCor(this->vertices[i].index,corAtual);
+		this->restringirCor(this->vertices[i].index,corAtual);
 
 	}
 
@@ -156,7 +155,7 @@ void Grafo::colorirGrafo(){
 
 void Grafo::imprime(){
 
-	cout << this->getCorAtual() << " " << 0 << endl;
+	cout << this->numCoresMaxima +1 << " " << 0 << endl;
 
 	for(int i = 0; i < this->getSize(); i++){
 		cout << this->corDoVertice[i] << " ";
@@ -175,14 +174,6 @@ int main() {
 		cin >> u >> v;
 
 		g.addEdge(u,v);
-	}
-
-	for(int i = 0; i < g.listaDeAdjacencia.size(); i++){
-		cout << "Adjacentes de " << i << ": ";
-		for(int j = 0; j < g.listaDeAdjacencia[i].size(); j++){
-			cout << g.listaDeAdjacencia[i][j] << " ";
-		}
-		cout << endl;
 	}
 
 	g.colorirGrafo();
